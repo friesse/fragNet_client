@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(csgo_gc)
+project(gc-server)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -47,12 +47,105 @@ else()
     endif()
 endif()
 
-add_subdirectory(csgo_gc)
-add_subdirectory(launcher)
-add_subdirectory(steamworks)
-
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
+
+#-------------------------------------------------
+# cryptopp-cmake
+#-------------------------------------------------
+set(CRYPTOPP_BUILD_TESTING OFF CACHE BOOL "Disable cryptopp tests")
+set(CRYPTOPP_INSTALL OFF CACHE BOOL "Disable cryptopp installation")
+
+# First try to find system cryptopp
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+    pkg_check_modules(CRYPTOPP QUIET libcrypto++)
+    if(CRYPTOPP_FOUND)
+        message(STATUS "Found system cryptopp: ${CRYPTOPP_VERSION}")
+        add_library(cryptopp::cryptopp INTERFACE IMPORTED)
+        set_target_properties(cryptopp::cryptopp PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${CRYPTOPP_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${CRYPTOPP_LIBRARIES}"
+        )
+        message(STATUS "Created cryptopp::cryptopp target from system installation")
+    endif()
+endif()
+
+# If system package not found, use FetchContent
+if(NOT TARGET cryptopp::cryptopp)
+    message(STATUS "System cryptopp not found, using FetchContent")
+    
+    # Clear any previous cryptopp variables
+    unset(CRYPTOPP_FOUND CACHE)
+    unset(CRYPTOPP_INCLUDE_DIR CACHE)
+    unset(CRYPTOPP_LIBRARIES CACHE)
+    
+    # Use FetchContent to get cryptopp-cmake
+    include(FetchContent)
+    FetchContent_Declare(
+        cryptopp-cmake
+        GIT_REPOSITORY https://github.com/abdes/cryptopp-cmake.git
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+    )
+    
+    # Prevent cryptopp-cmake from building tests and examples
+    set(CRYPTOPP_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(CRYPTOPP_INSTALL OFF CACHE BOOL "" FORCE)
+    set(CRYPTOPP_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
+    
+    # Make cryptopp-cmake available
+    FetchContent_MakeAvailable(cryptopp-cmake)
+    
+    if(NOT TARGET cryptopp::cryptopp)
+        message(STATUS "cryptopp::cryptopp target still not found, trying to create it manually")
+        if(TARGET cryptopp)
+            add_library(cryptopp::cryptopp ALIAS cryptopp)
+            message(STATUS "Created cryptopp::cryptopp alias from cryptopp target")
+        endif()
+    endif()
+    
+    if(NOT TARGET cryptopp::cryptopp)
+        message(WARNING "Failed to set up cryptopp::cryptopp target")
+    endif()
+endif()
+
+#-------------------------------------------------
+# mariadb
+#-------------------------------------------------
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    if (IS_32BIT)
+        set(MARIADB_LIB_DIR "${CMAKE_SOURCE_DIR}/mariadb/lib32")
+        set(MARIADB_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/mariadb/include32")
+    else()
+        set(MARIADB_LIB_DIR "${CMAKE_SOURCE_DIR}/mariadb/lib64")
+        set(MARIADB_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/mariadb/include64")
+    endif()
+    find_library(MARIADB_LIBRARY
+        NAMES libmariadb mariadb
+        PATHS ${MARIADB_LIB_DIR}
+        NO_DEFAULT_PATH
+    )
+else()
+    # linux/macOS
+    if(IS_32BIT)
+        find_library(MARIADB_LIBRARY 
+            NAMES libmariadb.a mariadb
+            PATHS /usr/lib/i386-linux-gnu
+            NO_DEFAULT_PATH
+            REQUIRED
+        )
+        set(MARIADB_INCLUDE_DIRS /usr/include/mariadb)
+    else()
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(MARIADB REQUIRED mariadb)
+    endif()
+endif()
+
+if(NOT MARIADB_LIBRARY AND NOT MARIADB_FOUND)
+    message(FATAL_ERROR "MariaDB not found. Please install libmariadb-dev (Linux) or set up MariaDB libraries manually (Windows)")
+endif()
 
 #-------------------------------------------------
 # protobuf
@@ -66,16 +159,6 @@ option(protobuf_WITH_ZLIB "Build with zlib support" OFF)
 
 FetchContent_Declare(protobuf GIT_REPOSITORY https://github.com/protocolbuffers/protobuf GIT_TAG 21.x GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(protobuf)
-
-#-------------------------------------------------
-# cryptopp-cmake
-#-------------------------------------------------
-
-option(CRYPTOPP_BUILD_TESTING "Build library tests" OFF)
-option(CRYPTOPP_INSTALL "Generate the install target for this project." OFF)
-
-FetchContent_Declare(cryptopp-cmake GIT_REPOSITORY https://github.com/abdes/cryptopp-cmake GIT_SHALLOW TRUE)
-FetchContent_MakeAvailable(cryptopp-cmake)
 
 add_definitions(-DSTEAM_API_EXPORTS)
 
@@ -102,13 +185,5 @@ else()
     endif()
 endif()
 
-#-------------------------------------------------
-# funchook
-#-------------------------------------------------
-
-option(FUNCHOOK_BUILD_SHARED "build shared library" OFF)
-option(FUNCHOOK_BUILD_TESTS "Build tests" OFF)
-option(FUNCHOOK_INSTALL "Install Funchook" OFF)
-
-FetchContent_Declare(funchook GIT_REPOSITORY https://github.com/kubo/funchook GIT_SHALLOW TRUE)
-FetchContent_MakeAvailable(funchook)
+add_subdirectory(steamworks)
+add_subdirectory(gc_server)

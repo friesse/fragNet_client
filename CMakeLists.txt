@@ -43,7 +43,7 @@ else()
     add_compile_options(-fpic -fvisibility=hidden)
 
     if (NOT APPLE)
-        add_link_options(-Wl,--no-undefined -Wl,-z,noexecstack)
+        add_link_options(-Wl,--no-undefined -Wl,-z,noexecstack -static-libgcc -static-libstdc++)
     endif()
 endif()
 
@@ -98,7 +98,7 @@ if (MSVC)
 else()
     add_compile_options(-fpic -fvisibility=hidden)
     if (NOT APPLE)
-        add_link_options(-Wl,--no-undefined -Wl,-z,noexecstack)
+        add_link_options(-Wl,--no-undefined -Wl,-z,noexecstack -static-libgcc -static-libstdc++)
     endif()
 endif()
 

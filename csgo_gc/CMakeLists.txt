@@ -1,0 +1,62 @@
+project(csgo_gc)
+
+add_library(csgo_gc SHARED
+    gc_client.cpp
+    gc_message.cpp
+    gc_server.cpp
+    gc_shared.cpp
+    graffiti.cpp
+    inventory.cpp
+    item_schema.cpp
+    keyvalue.cpp
+    main.cpp
+    networking_client.cpp
+    networking_server.cpp
+    random.cpp
+    steam_hook.cpp
+    tcp_connection.cpp
+    steam_network_message.cpp)
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_sources(csgo_gc PRIVATE platform_windows.cpp)
+else()
+    target_sources(csgo_gc PRIVATE platform_unix.cpp)
+endif()
+
+target_precompile_headers(csgo_gc PRIVATE stdafx.h)
+
+set_target_properties(csgo_gc PROPERTIES PREFIX "")
+
+if (MSVC)
+    target_compile_options(csgo_gc PRIVATE /W4 /wd4244)
+    target_compile_definitions(csgo_gc PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
+file(GLOB PROTOBUFS ../protobufs/*.cc)
+target_include_directories(csgo_gc PRIVATE
+    ${protobuf_SOURCE_DIR}/src
+    ../protobufs)
+target_sources(csgo_gc PRIVATE ${PROTOBUFS})
+source_group("Protobufs" FILES ${PROTOBUFS})
+
+target_link_libraries(csgo_gc PRIVATE
+    cryptopp
+    funchook-static
+    protobuf::libprotobuf
+    steam_api)
+
+if(WIN32)
+    target_link_libraries(csgo_gc PRIVATE ws2_32)
+endif()
+
+# apple message box
+if (APPLE)
+    target_link_libraries(csgo_gc PRIVATE "-framework Foundation")
+endif()
+
+if (OUTDIR)
+    add_custom_command(TARGET csgo_gc POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        $<TARGET_FILE:csgo_gc>
+        ${OUTDIR}/csgo_gc/${GC_LIB_DIR}/$<TARGET_FILE_NAME:csgo_gc>)
+endif()

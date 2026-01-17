@@ -1,0 +1,14 @@
+/*build*/
+/.idea/
+/.vs/
+/_deps/
+
+arch.c
+CMakeCache.txt
+*.vcxproj*
+*.sln
+*.cmake
+/CMakeFiles/
+*/CMakeFiles/
+
+compiled

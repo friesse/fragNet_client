@@ -40,7 +40,13 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y gcc-multilib g++-multilib
+          sudo apt-get install -y \
+            gcc-multilib g++-multilib \
+            libmariadb-dev:i386 \
+            libssl-dev:i386 \
+            libcrypto++-dev:i386 \
+            libprotobuf-dev:i386 \
+            zlib1g-dev:i386
           
       - name: Configure CMake
         run: cmake -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32 -B build -DCMAKE_BUILD_TYPE=Release

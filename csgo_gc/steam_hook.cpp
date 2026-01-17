@@ -17,6 +17,7 @@
 // mikkotodo update the sdk... DONT UPDATE IT PLEASE
 struct SteamNetworkingIdentity;
 
+#include <dlfcn.h>
 #include <steam/isteamgamecoordinator.h>
 #include <steam/isteamgameserver.h>
 #include <steam/steam_api.h>

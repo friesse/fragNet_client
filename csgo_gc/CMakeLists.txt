@@ -3,7 +3,6 @@ project(csgo_gc)
 add_library(csgo_gc SHARED
     gc_client.cpp
     gc_message.cpp
-    gc_server.cpp
     gc_shared.cpp
     graffiti.cpp
     inventory.cpp
@@ -11,7 +10,6 @@ add_library(csgo_gc SHARED
     keyvalue.cpp
     main.cpp
     networking_client.cpp
-    networking_server.cpp
     random.cpp
     steam_hook.cpp
     tcp_connection.cpp

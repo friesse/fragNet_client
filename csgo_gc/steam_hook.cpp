@@ -2,11 +2,9 @@
 // that this is the bridge betweem the game and ClientGC/ServerGC
 #include "steam_hook.h"
 #include "gc_client.h"
-#include "gc_server.h"
 #include "platform.h"
 #include "stdafx.h"
 #include <funchook.h>
-
 // defines STEAM_PRIVATE_API
 // #include <steam/steam_api_common.h> SINCE WE ARE USING THE OLD API WE NEED TO
 // REMOVE THIS UNFORTUNATELY (KILL ME)
@@ -26,7 +24,6 @@ struct SteamNetworkingIdentity;
 // these are in file scope for networking, callbacks and gc server
 // client connect/disconnect notifications
 static ClientGC *s_clientGC;
-static ServerGC *s_serverGC;
 
 template <size_t N>
 inline bool InterfaceMatches(const char *name, const char (&compare)[N]) {
@@ -51,14 +48,16 @@ inline bool InterfaceMatches(const char *name, const char (&compare)[N]) {
 
 // this class sucks but we need to do it this way because
 class SteamGameCoordinatorProxy final : public ISteamGameCoordinator {
-  const bool m_server;
-
 public:
-  SteamGameCoordinatorProxy(uint64_t steamId) : m_server{!steamId} {
-    if (m_server) {
-      Platform::Print("Creating ServerGC = %p\n", s_serverGC);
-      assert(!s_serverGC);
-      s_serverGC = new ServerGC;
+  SteamGameCoordinatorProxy(uint64_t steamId) {
+    if (!steamId) {
+      // This was previously for ServerGC, but we've removed it.
+      // Assuming we shouldn't be here if steamId is 0 or we error out.
+      // Or per removing srcds, maybe we just assert?
+      Platform::Print("Error: SteamGameCoordinatorProxy init with 0 steamID "
+                      "(Server mode removed)\n");
+      // assert(false);
+      // We can just proceed, s_clientGC might be null if we don't init it.
     } else {
       assert(!s_clientGC);
       s_clientGC = new ClientGC{steamId};
@@ -66,13 +65,7 @@ public:
   }
 
   ~SteamGameCoordinatorProxy() {
-    if (m_server) {
-      Platform::Print("Destroying ServerGC = %p\n", s_serverGC);
-      assert(s_serverGC);
-      delete s_serverGC;
-      s_serverGC = nullptr;
-    } else {
-      assert(s_clientGC);
+    if (s_clientGC) {
       delete s_clientGC;
       s_clientGC = nullptr;
     }
@@ -80,11 +73,7 @@ public:
 
   EGCResults SendMessage(uint32 unMsgType, const void *pubData,
                          uint32 cubData) override {
-    if (m_server) {
-      assert(s_serverGC);
-      s_serverGC->HandleMessage(unMsgType, pubData, cubData);
-    } else {
-      assert(s_clientGC);
+    if (s_clientGC) {
       s_clientGC->HandleMessage(unMsgType, pubData, cubData);
     }
 
@@ -101,21 +90,16 @@ public:
   }
 
   bool IsMessageAvailable(uint32 *pcubMsgSize) override {
-    if (m_server) {
-      return s_serverGC->HasOutgoingMessages(*pcubMsgSize);
-    } else {
+    if (s_clientGC) {
       return s_clientGC->HasOutgoingMessages(*pcubMsgSize);
     }
+    return false;
   }
 
   EGCResults RetrieveMessage(uint32 *punMsgType, void *pubDest, uint32 cubDest,
                              uint32 *pcubMsgSize) override {
-    bool result;
-
-    if (m_server) {
-      result = s_serverGC->PopOutgoingMessage(*punMsgType, pubDest, cubDest,
-                                              *pcubMsgSize);
-    } else {
+    bool result = false;
+    if (s_clientGC) {
       result = s_clientGC->PopOutgoingMessage(*punMsgType, pubDest, cubDest,
                                               *pcubMsgSize);
     }

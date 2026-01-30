@@ -283,6 +283,13 @@ void ClientGC::BuildMatchmakingHello(
 
   // global
   if (m_serverMatchmakingData.has_global_stats()) {
+    if (m_serverMatchmakingData.global_stats().has_main_post_url()) {
+      Platform::Print(
+          "[DEBUG] GlobalStats has Blog URL: %s\n",
+          m_serverMatchmakingData.global_stats().main_post_url().c_str());
+    } else {
+      Platform::Print("[DEBUG] GlobalStats present but no Blog URL.\n");
+    }
     *message.mutable_global_stats() = m_serverMatchmakingData.global_stats();
   }
 

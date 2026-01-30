@@ -20,7 +20,7 @@
 #endif
 
 namespace CCServer {
-constexpr const char *DEFAULT_IP = "79.72.94.86";
+constexpr const char *DEFAULT_IP = "87.106.100.217";
 constexpr int DEFAULT_PORT = 21818;
 } // namespace CCServer
 

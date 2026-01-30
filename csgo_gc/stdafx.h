@@ -4,6 +4,7 @@
 
 #include <array>
 #include <charconv>
+#include <cstdint>
 #include <queue>
 #include <random>
 #include <string>
@@ -12,8 +13,8 @@
 
 // might as well
 #include "base_gcmessages.pb.h"
-#include "cstrike15_gcmessages.pb.h"
 #include "cc_gcmessages.pb.h"
+#include "cstrike15_gcmessages.pb.h"
 #include "econ_gcmessages.pb.h"
 #include "engine_gcmessages.pb.h"
 #include "gcsdk_gcmessages.pb.h"
@@ -21,7 +22,6 @@
 
 // debug session
 // mikkotodo wtf is the comment above and why is this here
-namespace Platform
-{
+namespace Platform {
 void Print(const char *format, ...);
 }

@@ -15,7 +15,11 @@
 // mikkotodo update the sdk... DONT UPDATE IT PLEASE
 struct SteamNetworkingIdentity;
 
+#include <cstdint>
+
+#if !defined(_WIN32)
 #include <dlfcn.h>
+#endif
 #include <steam/isteamgamecoordinator.h>
 #include <steam/isteamgameserver.h>
 #include <steam/steam_api.h>
@@ -633,19 +637,10 @@ public:
                                            CSteamID steamID) override {
     EBeginAuthSessionResult result =
         m_original->BeginAuthSession(pAuthTicket, cbAuthTicket, steamID);
-    if (s_serverGC && result == k_EBeginAuthSessionResultOK) {
-      s_serverGC->ClientConnected(steamID.ConvertToUint64(), pAuthTicket,
-                                  cbAuthTicket);
-    }
-
     return result;
   }
 
   void EndAuthSession(CSteamID steamID) override {
-    if (s_serverGC) {
-      s_serverGC->ClientDisconnected(steamID.ConvertToUint64());
-    }
-
     m_original->EndAuthSession(steamID);
   }
 
